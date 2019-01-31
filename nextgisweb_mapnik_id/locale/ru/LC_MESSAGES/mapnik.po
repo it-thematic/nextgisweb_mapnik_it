@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.1.1\n"
 
-#: model.py:36 amd/ngw-qgis/VectorStyleWidget.js:32
+#: model.py:36 amd/ngw-qgis/MapnikStyleWidget.js:32
 msgid "Mapnik style"
 msgstr "Стиль Mapnik"
 

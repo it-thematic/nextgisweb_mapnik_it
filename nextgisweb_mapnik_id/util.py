@@ -2,5 +2,5 @@
 from __future__ import unicode_literals
 from nextgisweb.i18n import trstring_factory
 
-COMP_ID = 'nextgisweb_mapnik_it'
+COMP_ID = 'mapnik'
 _ = trstring_factory(COMP_ID)

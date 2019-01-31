@@ -1,4 +1,3 @@
-/*global define*/
 define([
     "dojo/_base/declare",
     "dojo/_base/lang",
@@ -31,6 +30,7 @@ define([
     return declare([ContentPane, serialize.Mixin, _TemplatedMixin, _WidgetsInTemplateMixin], {
         templateString: hbsI18n(template, i18n),
         title: i18n.gettext("Mapnik style"),
+        prefix: "mapnik_vector_style",
 
         serializeInMixin: function (data) {
             var prefix = this.prefix,
@@ -44,5 +44,6 @@ define([
                 this.wFileUpload.upload_promise !== undefined &&
                     this.wFileUpload.upload_promise.isResolved() : true;
         }
+
     });
 });

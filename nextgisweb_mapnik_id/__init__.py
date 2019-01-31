@@ -11,20 +11,20 @@ from .model import Base
 from .util import COMP_ID
 
 
-class MapnikItComponent(Component):
+class MapnikComponent(Component):
     identity = COMP_ID
     metadata = Base.metadata
 
     def initialize(self):
-        super(MapnikItComponent, self).initialize()
+        super(MapnikComponent, self).initialize()
 
     def configure(self):
-        super(MapnikItComponent, self).configure()
+        super(MapnikComponent, self).configure()
 
 
     @require('resource')
     def setup_pyramid(self, config):
-        super(MapnikItComponent, self).setup_pyramid(config)
+        super(MapnikComponent, self).setup_pyramid(config)
 
         # Отдельный поток в котором мы будем запускать весь рендеринг,
         # иначе все падает в segfault при конкурентной обработке запросов.
@@ -46,7 +46,7 @@ class MapnikItComponent(Component):
 
 def pkginfo():
     return dict(components=dict(
-        nextgisweb_mapnik_it='nextgisweb_mapnik_id'))
+        mapnik='nextgisweb_mapnik_id'))
 
 
 def amd_packages():
