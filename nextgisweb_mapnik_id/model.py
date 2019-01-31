@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import lxml.etree.ElementTree as ET
+from lxml.etree import ElementTree as ET
 from collections import namedtuple
 from Queue import Queue
 from shutil import copyfileobj
