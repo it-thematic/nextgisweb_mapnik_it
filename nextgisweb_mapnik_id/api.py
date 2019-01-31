@@ -23,6 +23,6 @@ def vector_style_xml(request):
 
 def setup_pyramid(comp, config):
     config.add_route(
-        'mapnik_it.vector_style_xml', '/api/resource/{id}/xml',
+        'mapnik.vector_style_xml', '/api/resource/{id}/xml',
         factory=resource_factory
     ).add_view(vector_style_xml, context=MapnikVectorStyle, request_method='GET')
