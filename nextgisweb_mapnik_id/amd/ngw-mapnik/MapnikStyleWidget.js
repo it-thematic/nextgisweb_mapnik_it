@@ -11,7 +11,7 @@ define([
     "ngw-pyramid/hbs-i18n",
     "ngw-resource/serialize",
     // resource
-    "dojo/text!./template/VectorStyleWidget.hbs",
+    "dojo/text!./template/MapnikStyleWidget.hbs",
     // template
     "dojox/layout/TableContainer",
     "ngw-file-upload/Uploader"
