@@ -8,7 +8,7 @@ from .model import MapnikVectorStyle
 from .util import _
 
 
-class Widjet(Widjet):
+class Widget(Widget):
     resource = MapnikVectorStyle
     operation = ('create', 'update')
     amdmod = 'ngw-mapnik/MapnikStyleWidget'

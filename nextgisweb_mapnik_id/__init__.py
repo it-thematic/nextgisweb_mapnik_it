@@ -21,8 +21,6 @@ class MapnikComponent(Component):
     def configure(self):
         super(MapnikComponent, self).configure()
 
-
-    @require('resource')
     def setup_pyramid(self, config):
         super(MapnikComponent, self).setup_pyramid(config)
 
@@ -34,13 +32,13 @@ class MapnikComponent(Component):
         self.worker.start()
 
         from . import view, api
-        view.setup_pyramid(self, config)
         api.setup_pyramid(self, config)
+        view.setup_pyramid(self, config)
 
     def renderer(self):
-
         while True:
             options = self.queue.get()
+            self.logger.info('Запрос тайла из Mapnik')
 
 4
 
@@ -50,6 +48,6 @@ def pkginfo():
 
 
 def amd_packages():
-    return (
-        ('ngw-manpik', 'nextgisweb_mapnik_id:amd/ngw-manpik'),
-    )
+    return ((
+        'ngw-manpik', 'nextgisweb_mapnik_id:amd/ngw-mapnik'
+    ),)
