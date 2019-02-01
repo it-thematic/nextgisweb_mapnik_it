@@ -8,6 +8,7 @@ version = '0.0'
 
 requires = (
     'nextgisweb',
+    'Pillow'
 )
 
 entry_points = {

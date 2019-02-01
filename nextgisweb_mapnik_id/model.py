@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from lxml.etree import ElementTree as ET
 from collections import namedtuple
 from Queue import Queue
 from shutil import copyfileobj
-from StringIO import StringIO
 try:
     import mapnik
 except ImportError:
     import mapnik2 as mapnik
-from PIL import Image
-from zope.interface import implements
 
+from zope.interface import implements
 
 from nextgisweb import db
 from nextgisweb.env import env
 from nextgisweb.feature_layer import IFeatureLayer
 from nextgisweb.file_storage import FileObj
-from nextgisweb.geometry import box
 from nextgisweb.models import declarative_base
 from nextgisweb.resource import (
     Resource,
@@ -30,14 +26,13 @@ from nextgisweb.render import (
     IExtentRenderRequest,
     ITileRenderRequest,
     ILegendableStyle)
+from nextgisweb.spatial_ref_sys import SRS
 from .util import _
 
 Base = declarative_base()
 
-ImageOptions = namedtuple('ImageOptions', [
-    'fndata', 'srs', 'render_size', 'extended', 'target_box', 'result'])
-LegendOptions = namedtuple('LegendOptions', [
-    'qml', 'geometry_type', 'layer_name', 'result'])
+ImageOptions = namedtuple('ImageOptions', ['fndata', 'srs', 'render_size', 'extended', 'target_box', 'result'])
+LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name', 'result'])
 
 
 class MapnikVectorStyle(Base, Resource):
@@ -67,10 +62,21 @@ class MapnikVectorStyle(Base, Resource):
         return RenderRequest(self, srs, cond)
 
     def _render_image(self, srs, extent, size, cond, padding=0):
+        """
+        Рендеринг отдельного изображения(картинки, тайла)
+
+        :param SRS srs: модель системы координат
+        :param tuple[float] extent: ограничивающий прямоугольник в единицах измерения проекции (метры псевдомеркатора)
+        :param tuple[integer] size: размер изображения (256 * 256)
+        :param dict cond: дополнительное уловие отбора из модели
+        :param float padding: отступ от картинки
+        :return:
+        """
+        # Разрешение. Сколько в одном пикселе единиц сетки
         res_x = (extent[2] - extent[0]) / size[0]
         res_y = (extent[3] - extent[1]) / size[1]
 
-        # Экстент с учетом отступов
+        # Экстент с учетом отступов ( в единицах измерения карты)
         extended = (
             extent[0] - res_x * padding,
             extent[1] - res_y * padding,
@@ -92,57 +98,18 @@ class MapnikVectorStyle(Base, Resource):
             size[1] + padding
         )
 
-        # Выбираем объекты по экстенту
-        feature_query = self.parent.feature_query()
-        if cond is not None:
-            feature_query.filter_by(**cond)
-
-        if hasattr(feature_query, 'srs'):
-            feature_query.srs(srs)
-        feature_query.intersects(box(*extent, srid=srs.id))
-        feature_query.geom()
-        features = feature_query()
-
-        res_im = None
-        ds = mapnik.MemoryDatasource()
+        res_img = None
         try:
-            for (fid, f) in enumerate(features):
-                if mapnik.mapnik_version() < 200100:
-                    feature = mapnik.Feature(fid)
-                else:
-                    feature = mapnik.Feature(mapnik.Context(), fid)
-                feature.add_geometries_from_wkb(f.geom.wkb)
-                ds.add_feature(feature)
-
-            style_content = str(self.style_content)
-
-            m = mapnik.Map(size[0], size[1])
-            mapnik.load_map_from_string(m, style_content)
-            m.zoom_to_box(mapnik.Box2d(*extent))
-
-            layer = mapnik.Layer('main')
-            layer.datasource = ds
-
-            root = ET.fromstring(style_content)
-            styles = [s.attrib.get('name') for s in root.iter('Style')]
-            for s in styles:
-                layer.styles.append(s)
-            m.layers.append(layer)
-
-            img = mapnik.Image(size[0], size[1])
-            mapnik.render(m, img)
-            data = img.tostring('png')
-
-            # Преобразуем изображение из PNG в объект PIL
-            buf = StringIO()
-            buf.write(data)
-            buf.seek(0)
-
-            res_im = Image.open(buf)
-        except Exception as e:
-            self.logger.error(e.message)
-
-        return res_im
+            result = Queue()
+            options = ImageOptions(
+                env.file_storage.filename(self.xml_fileobj), self.srs, render_size, extended, target_box, result
+            )
+            env.mapnik.queue.put(options)
+            render_timeout = int(env.mapnik.settings.get('render_timeout'))
+            res_img = result.get(block=True, timeout=render_timeout)
+        finally:
+            pass
+        return res_img
 
     def render_legend(self):
         result = Queue()
