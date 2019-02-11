@@ -105,7 +105,7 @@ class MapnikVectorStyle(Base, Resource):
                 env.file_storage.filename(self.xml_fileobj), self.srs, render_size, extended, target_box, result
             )
             env.mapnik.queue.put(options)
-            render_timeout = int(env.mapnik.settings.get('render_timeout'))
+            render_timeout = int(env.mapnik.settings.get('render_timeout'), 30)
             res_img = result.get(block=True, timeout=render_timeout)
         finally:
             pass

@@ -3,16 +3,27 @@ from __future__ import unicode_literals
 
 import os
 import PIL
+import tempfile
+import StringIO
 from threading import Thread, Lock
 from Queue import Queue
+import logging
+
 has_mapnik = False
 try:
     import mapnik
-except ImportError:
+    has_mapnik = True
+except ImportError as e:
+    logging.error(e.message)
+    logging.debug('NOT IMPORT MAPNIK!!!. Try import mapnik2')
     try:
         import mapnik2 as mapnik
-    except ImportError:
-        has_mapnik = False
+        has_mapnik = True
+    except ImportError as e:
+        logging.error(e.message)
+        logging.debug('NOT IMPORT MAPNIK2!!! Mapnik not supported.')
+logging.info('Has_mapnik: {}'.format(has_mapnik))
+
 from nextgisweb.component import Component, require
 
 from .model import Base
@@ -71,17 +82,31 @@ class MapnikComponent(Component):
         while True:
             options = self.queue.get()
             xml_map, srs, render_size, extended, target_box, result = options
-            res_img = PIL.Image.new('RGBA', (0, 0))
             if not has_mapnik:
-                result.put(res_img)
+                result.put(PIL.Image.new('RGBA', (0, 0)))
             else:
                 mapnik_map = mapnik.Map(0, 0)
                 mapnik.load_map(mapnik_map, xml_map, True)
-                mapnik_map.resize(render_size, render_size)
-                mapnik_map.zoom_to_box(extended)
-                im = mapnik.Image(render_size, render_size)
-                res_img = PIL.Image.open(im)
-                result.put(res_img)
+
+                width, height = render_size
+                mapnik_map.resize(width, height)
+
+                x1, y1, x2, y2 = extended
+                box = mapnik.Box2d(x1, y1, x2, y2)
+                mapnik_map.zoom_to_box(box)
+
+                mapnik_image = mapnik.Image(render_size, render_size)
+                mapnik.render(mapnik_map, mapnik_image)
+
+                filename = tempfile.mktemp()
+                mapnik_image.save(filename, b'png256')
+
+                with open(filename, mode='rb') as f:
+                    buf = StringIO(f.read())
+                    buf.seek(0)
+                    res_img = PIL.Image.open(buf)
+                    result.put(res_img.crop(target_box))
+
             self.logger.info('Запрос тайла из Mapnik')
 
 
