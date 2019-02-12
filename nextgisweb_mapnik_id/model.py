@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from collections import namedtuple
-from Queue import Queue
+from Queue import Empty, Queue
 from shutil import copyfileobj
 try:
     import mapnik
@@ -106,7 +106,10 @@ class MapnikVectorStyle(Base, Resource):
             )
             env.mapnik.queue.put(options)
             render_timeout = int(env.mapnik.settings.get('render_timeout'), 30)
-            res_img = result.get(block=True, timeout=render_timeout)
+            try:
+                res_img = result.get(block=True, timeout=render_timeout)
+            except Empty:
+                pass
         finally:
             pass
         return res_img

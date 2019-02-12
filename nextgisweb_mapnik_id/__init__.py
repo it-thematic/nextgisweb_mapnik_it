@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import logging
 import os
-import PIL
-import tempfile
 import StringIO
+import tempfile
+import time
+
+import PIL
+
 from threading import Thread, Lock
 from Queue import Queue
-import logging
 
 has_mapnik = False
 try:
@@ -36,22 +39,36 @@ class MapnikComponent(Component):
 
     def initialize(self):
         super(MapnikComponent, self).initialize()
-        if 'mapnikThreadCount' not in self.settings:
+        # Количество потоков в которых будут рендериться тайлы/изображения
+        if 'thread_count' not in self.settings:
             import multiprocessing  # noqa
-            self.settings['mapnikThreadCount'] = multiprocessing.cpu_count()
+            self.settings['thread_count'] = multiprocessing.cpu_count()
 
-        if 'mapnikTilePath' not in self.settings:
+        # Путь ко временной директории хранения отрендеренных тайлов
+        if 'path' not in self.settings:
             from tempfile import gettempdir  # noqa
-            self.settings['mapnikTilePath'] = gettempdir()
+            self.settings['path'] = gettempdir()
 
-        if 'mapnikMaxZoom' not in self.settings:
-            self.settings['mapnikMaxZoom'] = 23
+        # максимальный уровень для рендеринга тайлов
+        if 'max_zoom' not in self.settings:
+            self.settings['max_zoom'] = 23
         # Чтобы на раннем этапе отсечь ошибку задания уровня. Отрицательное число тоже нельзя
         try:
-            self.settings['mapnikMaxZoom'] = abs(int(self.settings['mapnikMaxZoom']))
+            self.settings['max_zoom'] = abs(int(self.settings['max_zoom']))
         except Exception as e:
             self.logger.error(e.message)
-            self.settings['mapnikMaxZoom'] = 23
+            self.settings['max_zoom'] = 23
+
+        # максимальное время ожидания рендеринга
+        if 'render_timeout' not in self.settings:
+            self.settings['render_timeout'] = 30
+        else:
+            try:
+                self.settings['render_timeout'] = int(self.settings['render_timeout'])
+            except Exception as e:
+                self.logger.error('Неверный формат `render_timeout`. Значение по умолчанию установлено в 30 с.')
+                self.settings['render_timeout'] = 30
+
 
     def configure(self):
         super(MapnikComponent, self).configure()
@@ -65,14 +82,14 @@ class MapnikComponent(Component):
         self.printLock = Lock()
         self.workers = {}
 
-        for i in range(self.settings['mapnikThreadCount']):
+        for i in range(self.settings['thread_count']):
             worker = Thread(target=self.renderer)
             worker.daemon = True
             worker.start()
             self.workers[i] = worker
 
-        if not os.path.isdir(self.settings['mapnikTilePath']):
-            os.mkdir(self.settings['mapnikTilePath'])
+        if not os.path.isdir(self.settings['path']):
+            os.mkdir(self.settings['path'])
 
         from . import view, api
         api.setup_pyramid(self, config)
@@ -82,8 +99,10 @@ class MapnikComponent(Component):
         while True:
             options = self.queue.get()
             xml_map, srs, render_size, extended, target_box, result = options
+            if type(xml_map) == unicode:
+                xml_map = xml_map.decode('utf-8')
             if not has_mapnik:
-                result.put(PIL.Image.new('RGBA', (0, 0)))
+                result.put(PIL.Image.new('RGBA', (256, 256)), 0)
             else:
                 mapnik_map = mapnik.Map(0, 0)
                 mapnik.load_map(mapnik_map, xml_map, True)
@@ -96,16 +115,26 @@ class MapnikComponent(Component):
                 mapnik_map.zoom_to_box(box)
 
                 mapnik_image = mapnik.Image(render_size, render_size)
+
+                # Вычисляем время рендеринга. Если прошло больше чем `render_timeout`, то не возвращаем результат
+                #     т.к. в модели время ожидания из очереди уже истекло
+                _t = time.time()
                 mapnik.render(mapnik_map, mapnik_image)
+                _t = time.time() - _t
+                if _t > self.settings['render_timeout']:
+                    self.logger.error('Время рендеринга больше, чем время ожидания ответа. {:0.2f}'.format(_t))
+                    return
 
                 filename = tempfile.mktemp()
-                mapnik_image.save(filename, b'png256')
+                mapnik_image.save(filename, util.MAPNIK_DEFAULT_FORMAT)
 
                 with open(filename, mode='rb') as f:
                     buf = StringIO(f.read())
-                    buf.seek(0)
-                    res_img = PIL.Image.open(buf)
-                    result.put(res_img.crop(target_box))
+                os.remove(filename)
+
+                buf.seek(0)
+                res_img = PIL.Image.open(buf)
+                result.put(res_img.crop(target_box))
 
             self.logger.info('Запрос тайла из Mapnik')
 
