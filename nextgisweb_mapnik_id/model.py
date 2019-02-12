@@ -105,7 +105,7 @@ class MapnikVectorStyle(Base, Resource):
                 env.file_storage.filename(self.xml_fileobj), self.srs, render_size, extended, target_box, result
             )
             env.mapnik.queue.put(options)
-            render_timeout = int(env.mapnik.settings.get('render_timeout'), 30)
+            render_timeout = env.mapnik.settings['render_timeout']
             try:
                 res_img = result.get(block=True, timeout=render_timeout)
             except Empty:
@@ -119,7 +119,7 @@ class MapnikVectorStyle(Base, Resource):
         options = LegendOptions(env.file_storage.filename(self.xml_fileobj),
                                 self.parent.geometry_type,
                                 self.parent.display_name, result)
-        env.qgis.queue.put(options)
+        env.mapnik.queue.put(options)
         return result.get()
 
 

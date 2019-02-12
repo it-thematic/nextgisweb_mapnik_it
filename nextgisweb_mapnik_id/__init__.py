@@ -3,12 +3,12 @@ from __future__ import unicode_literals
 
 import logging
 import os
-import StringIO
 import tempfile
 import time
 
 import PIL
 
+from StringIO import StringIO
 from threading import Thread, Lock
 from Queue import Queue
 
@@ -100,7 +100,7 @@ class MapnikComponent(Component):
             options = self.queue.get()
             xml_map, srs, render_size, extended, target_box, result = options
             if type(xml_map) == unicode:
-                xml_map = xml_map.decode('utf-8')
+                xml_map = unicode(xml_map).encode('utf-8')
             if not has_mapnik:
                 result.put(PIL.Image.new('RGBA', (256, 256)), 0)
             else:
@@ -114,7 +114,7 @@ class MapnikComponent(Component):
                 box = mapnik.Box2d(x1, y1, x2, y2)
                 mapnik_map.zoom_to_box(box)
 
-                mapnik_image = mapnik.Image(render_size, render_size)
+                mapnik_image = mapnik.Image(width, height)
 
                 # Вычисляем время рендеринга. Если прошло больше чем `render_timeout`, то не возвращаем результат
                 #     т.к. в модели время ожидания из очереди уже истекло
