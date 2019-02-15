@@ -5,12 +5,11 @@ import logging
 import os
 import tempfile
 import time
-
-import PIL
-
+from Queue import Queue
 from StringIO import StringIO
 from threading import Thread, Lock
-from Queue import Queue
+
+import PIL
 
 has_mapnik = False
 try:
@@ -27,7 +26,7 @@ except ImportError as e:
         logging.debug('NOT IMPORT MAPNIK2!!! Mapnik not supported.')
 logging.info('Has_mapnik: {}'.format(has_mapnik))
 
-from nextgisweb.component import Component, require
+from nextgisweb.component import Component
 
 from .model import Base
 from .util import COMP_ID
@@ -137,6 +136,13 @@ class MapnikComponent(Component):
                 result.put(res_img.crop(target_box))
 
             self.logger.info('Запрос тайла из Mapnik')
+
+    settings_info = (
+        dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
+        dict(key='path', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
+        dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
+        dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса QGIS\'ом в cек'),
+    )
 
 
 def pkginfo():
