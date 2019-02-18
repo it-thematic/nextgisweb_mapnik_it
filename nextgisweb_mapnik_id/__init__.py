@@ -94,7 +94,7 @@ class MapnikComponent(Component):
 
     @staticmethod
     def _create_empty_image():
-        return Image.new('RGBA', (256, 256)), (0, 0, 0, 0)
+        return Image.new('RGBA', (256, 256), (0, 0, 0, 0))
 
     def renderer(self):
         while True:
