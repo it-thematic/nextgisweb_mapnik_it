@@ -8,8 +8,7 @@ import time
 from Queue import Queue
 from StringIO import StringIO
 from threading import Thread, Lock
-
-import PIL
+from PIL import Image
 
 has_mapnik = False
 try:
@@ -68,7 +67,6 @@ class MapnikComponent(Component):
                 self.logger.error('Неверный формат `render_timeout`. Значение по умолчанию установлено в 30 с.')
                 self.settings['render_timeout'] = 30
 
-
     def configure(self):
         super(MapnikComponent, self).configure()
 
@@ -94,6 +92,10 @@ class MapnikComponent(Component):
         api.setup_pyramid(self, config)
         view.setup_pyramid(self, config)
 
+    @staticmethod
+    def _create_empty_image():
+        return Image.new('RGBA', (256, 256)), (0, 0, 0, 0)
+
     def renderer(self):
         while True:
             options = self.queue.get()
@@ -101,41 +103,46 @@ class MapnikComponent(Component):
             if type(xml_map) == unicode:
                 xml_map = unicode(xml_map).encode('utf-8')
             if not has_mapnik:
-                result.put(PIL.Image.new('RGBA', (256, 256)), 0)
-            else:
-                mapnik_map = mapnik.Map(0, 0)
+                result.put(self._create_empty_image())
+                return
+
+            mapnik_map = mapnik.Map(0, 0)
+            try:
                 mapnik.load_map(mapnik_map, xml_map, True)
+            except Exception as e:
+                self.logger.error('Ошибка загрузки mapnik-стиля')
+                self.logger.exception(e.message)
+                result.put(self._create_empty_image())
+                return
 
-                width, height = render_size
-                mapnik_map.resize(width, height)
+            width, height = render_size
+            mapnik_map.resize(width, height)
 
-                x1, y1, x2, y2 = extended
-                box = mapnik.Box2d(x1, y1, x2, y2)
-                mapnik_map.zoom_to_box(box)
+            x1, y1, x2, y2 = extended
+            box = mapnik.Box2d(x1, y1, x2, y2)
+            mapnik_map.zoom_to_box(box)
 
-                mapnik_image = mapnik.Image(width, height)
+            mapnik_image = mapnik.Image(width, height)
 
-                # Вычисляем время рендеринга. Если прошло больше чем `render_timeout`, то не возвращаем результат
-                #     т.к. в модели время ожидания из очереди уже истекло
-                _t = time.time()
-                mapnik.render(mapnik_map, mapnik_image)
-                _t = time.time() - _t
-                if _t > self.settings['render_timeout']:
-                    self.logger.error('Время рендеринга больше, чем время ожидания ответа. {:0.2f}'.format(_t))
-                    return
+            # Вычисляем время рендеринга. Если прошло больше чем `render_timeout`, то не возвращаем результат
+            #     т.к. в модели время ожидания из очереди уже истекло
+            _t = time.time()
+            mapnik.render(mapnik_map, mapnik_image)
+            _t = time.time() - _t
+            if _t > self.settings['render_timeout']:
+                self.logger.error('Время рендеринга больше, чем время ожидания ответа. {:0.2f}'.format(_t))
+                return
 
-                filename = tempfile.mktemp()
-                mapnik_image.save(filename, util.MAPNIK_DEFAULT_FORMAT)
+            filename = tempfile.mktemp()
+            mapnik_image.save(filename, util.MAPNIK_DEFAULT_FORMAT)
 
-                with open(filename, mode='rb') as f:
-                    buf = StringIO(f.read())
-                os.remove(filename)
+            with open(filename, mode='rb') as f:
+                buf = StringIO(f.read())
+            os.remove(filename)
 
-                buf.seek(0)
-                res_img = PIL.Image.open(buf)
-                result.put(res_img.crop(target_box))
-
-            self.logger.info('Запрос тайла из Mapnik')
+            buf.seek(0)
+            res_img = Image.open(buf)
+            result.put(res_img.crop(target_box))
 
     settings_info = (
         dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
