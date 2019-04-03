@@ -41,6 +41,13 @@ class MapnikComponent(Component):
         if 'thread_count' not in self.settings:
             import multiprocessing  # noqa
             self.settings['thread_count'] = multiprocessing.cpu_count()
+        else:
+            try:
+                self.settings['thread_count'] = int(self.settings['thread_count'])
+            except ValueError:
+                import multiprocessing  # noqa
+                self.logger.error('Неверный формат `thread_count`. Значение по умолчанию установлено в cpu_count().')
+                self.settings['thread_count'] = multiprocessing.cpu_count()
 
         # Путь ко временной директории хранения отрендеренных тайлов
         if 'path' not in self.settings:
@@ -53,8 +60,8 @@ class MapnikComponent(Component):
         # Чтобы на раннем этапе отсечь ошибку задания уровня. Отрицательное число тоже нельзя
         try:
             self.settings['max_zoom'] = abs(int(self.settings['max_zoom']))
-        except Exception as e:
-            self.logger.error(e.message)
+        except ValueError:
+            self.logger.error('Неверный формат `max_zoom`. Значение по умолчанию установлено в 23.')
             self.settings['max_zoom'] = 23
 
         # максимальное время ожидания рендеринга
@@ -63,7 +70,7 @@ class MapnikComponent(Component):
         else:
             try:
                 self.settings['render_timeout'] = int(self.settings['render_timeout'])
-            except Exception as e:
+            except ValueError:
                 self.logger.error('Неверный формат `render_timeout`. Значение по умолчанию установлено в 30 с.')
                 self.settings['render_timeout'] = 30
 
@@ -100,17 +107,18 @@ class MapnikComponent(Component):
         while True:
             options = self.queue.get()
             xml_map, srs, render_size, extended, target_box, result = options
-            if type(xml_map) == unicode:
-                xml_map = unicode(xml_map).encode('utf-8')
             if not has_mapnik:
                 result.put(self._create_empty_image())
                 return
+
+            if type(xml_map) == unicode:
+                xml_map = unicode(xml_map).encode('utf-8')
 
             mapnik_map = mapnik.Map(0, 0)
             try:
                 mapnik.load_map(mapnik_map, xml_map, True)
             except Exception as e:
-                self.logger.error('Ошибка загрузки mapnik-стиля')
+                self.logger.error('Ошибка загрузки mapnik-карты')
                 self.logger.exception(e.message)
                 result.put(self._create_empty_image())
                 return
@@ -148,7 +156,7 @@ class MapnikComponent(Component):
         dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
         dict(key='path', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
         dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
-        dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса QGIS\'ом в cек'),
+        dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса mapnik\'ом в cек. По умолчанию 30'),
     )
 
 
