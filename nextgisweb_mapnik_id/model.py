@@ -37,7 +37,7 @@ LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name
 
 class MapnikVectorStyle(Base, Resource):
     identity = 'mapnik_vector_style'
-    cls_display_name = _("Mapnik style")
+    cls_display_name = _(u"Mapnik style")
 
     implements(IRenderableStyle, ILegendableStyle)
 
