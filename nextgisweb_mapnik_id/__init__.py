@@ -50,9 +50,9 @@ class MapnikComponent(Component):
                 self.settings['thread_count'] = multiprocessing.cpu_count()
 
         # Путь ко временной директории хранения отрендеренных тайлов
-        if 'path' not in self.settings:
+        if 'tempdir' not in self.settings:
             from tempfile import gettempdir  # noqa
-            self.settings['path'] = gettempdir()
+            self.settings['tempdir'] = gettempdir()
 
         # максимальный уровень для рендеринга тайлов
         if 'max_zoom' not in self.settings:
@@ -92,8 +92,8 @@ class MapnikComponent(Component):
             worker.start()
             self.workers[i] = worker
 
-        if not os.path.isdir(self.settings['path']):
-            os.mkdir(self.settings['path'])
+        if not os.path.isdir(self.settings['tempdir']):
+            os.mkdir(self.settings['tempdir'])
 
         from . import view, api
         api.setup_pyramid(self, config)
@@ -154,7 +154,7 @@ class MapnikComponent(Component):
 
     settings_info = (
         dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
-        dict(key='path', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
+        dict(key='tempdir', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
         dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
         dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса mapnik\'ом в cек. По умолчанию 30'),
     )
