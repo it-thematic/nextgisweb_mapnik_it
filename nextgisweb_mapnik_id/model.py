@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 from collections import namedtuple
 from Queue import Empty, Queue
 from shutil import copyfileobj
@@ -102,7 +101,7 @@ class MapnikVectorStyle(Base, Resource):
         try:
             result = Queue()
             options = ImageOptions(
-                env.file_storage.filename(self.xml_fileobj), self.srs, render_size, extended, target_box, result
+                env.file_storage.filename(self.xml_fileobj).encode('utf-8'), self.srs, render_size, extended, target_box, result
             )
             env.mapnik.queue.put(options)
             render_timeout = env.mapnik.settings['render_timeout']

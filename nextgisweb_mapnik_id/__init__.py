@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import logging
 import os
 import tempfile
@@ -74,6 +72,10 @@ class MapnikComponent(Component):
                 self.logger.error('Неверный формат `render_timeout`. Значение по умолчанию установлено в 30 с.')
                 self.settings['render_timeout'] = 30
 
+        if has_mapnik:
+            if 'custom_font_dir' in self.settings:
+                mapnik.register_fonts(self.settings['custom_font_dir'].encode('utf-8'))
+
     def configure(self):
         super(MapnikComponent, self).configure()
 
@@ -111,9 +113,6 @@ class MapnikComponent(Component):
                 result.put(self._create_empty_image())
                 return
 
-            if type(xml_map) == unicode:
-                xml_map = unicode(xml_map).encode('utf-8')
-
             mapnik_map = mapnik.Map(0, 0)
             try:
                 mapnik.load_map(mapnik_map, xml_map, True)
@@ -141,13 +140,10 @@ class MapnikComponent(Component):
                 self.logger.error('Время рендеринга больше, чем время ожидания ответа. {:0.2f}'.format(_t))
                 return
 
-            filename = tempfile.mktemp()
-            mapnik_image.save(filename, util.MAPNIK_DEFAULT_FORMAT)
-
-            with open(filename, mode='rb') as f:
-                buf = StringIO(f.read())
-            os.remove(filename)
-
+            # Преобразование изображения из PNG в объект PIL
+            data = mapnik_image.tostring('png')
+            buf = StringIO()
+            buf.write(data)
             buf.seek(0)
             res_img = Image.open(buf)
             result.put(res_img.crop(target_box))
@@ -157,6 +153,7 @@ class MapnikComponent(Component):
         dict(key='tempdir', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
         dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
         dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса mapnik\'ом в cек. По умолчанию 30'),
+        dict(key='custom_font_dir', desc=u'Директория для хранения пользовательских шрифтов. По умолчанию: /usr/share/fonts')
     )
 
 
