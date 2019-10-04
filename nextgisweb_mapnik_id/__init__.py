@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-import os
-import tempfile
 import time
 from Queue import Queue
 from StringIO import StringIO
@@ -47,11 +45,6 @@ class MapnikComponent(Component):
                 self.logger.error('Неверный формат `thread_count`. Значение по умолчанию установлено в cpu_count().')
                 self.settings['thread_count'] = multiprocessing.cpu_count()
 
-        # Путь ко временной директории хранения отрендеренных тайлов
-        if 'tempdir' not in self.settings:
-            from tempfile import gettempdir  # noqa
-            self.settings['tempdir'] = gettempdir()
-
         # максимальный уровень для рендеринга тайлов
         if 'max_zoom' not in self.settings:
             self.settings['max_zoom'] = 23
@@ -93,9 +86,6 @@ class MapnikComponent(Component):
             worker.daemon = True
             worker.start()
             self.workers[i] = worker
-
-        if not os.path.isdir(self.settings['tempdir']):
-            os.mkdir(self.settings['tempdir'])
 
         from . import view, api
         api.setup_pyramid(self, config)
@@ -150,7 +140,6 @@ class MapnikComponent(Component):
 
     settings_info = (
         dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
-        dict(key='tempdir', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
         dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
         dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса mapnik\'ом в cек. По умолчанию 30'),
         dict(key='custom_font_dir', desc=u'Директория для хранения пользовательских шрифтов. По умолчанию: /usr/share/fonts')
