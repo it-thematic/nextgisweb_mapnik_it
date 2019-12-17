@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import logging
-import os
-import tempfile
 import time
 from Queue import Queue
 from StringIO import StringIO
@@ -49,11 +45,6 @@ class MapnikComponent(Component):
                 self.logger.error('Неверный формат `thread_count`. Значение по умолчанию установлено в cpu_count().')
                 self.settings['thread_count'] = multiprocessing.cpu_count()
 
-        # Путь ко временной директории хранения отрендеренных тайлов
-        if 'path' not in self.settings:
-            from tempfile import gettempdir  # noqa
-            self.settings['path'] = gettempdir()
-
         # максимальный уровень для рендеринга тайлов
         if 'max_zoom' not in self.settings:
             self.settings['max_zoom'] = 23
@@ -74,6 +65,10 @@ class MapnikComponent(Component):
                 self.logger.error('Неверный формат `render_timeout`. Значение по умолчанию установлено в 30 с.')
                 self.settings['render_timeout'] = 30
 
+        if has_mapnik:
+            if 'custom_font_dir' in self.settings:
+                mapnik.register_fonts(self.settings['custom_font_dir'].encode('utf-8'))
+
     def configure(self):
         super(MapnikComponent, self).configure()
 
@@ -92,9 +87,6 @@ class MapnikComponent(Component):
             worker.start()
             self.workers[i] = worker
 
-        if not os.path.isdir(self.settings['path']):
-            os.mkdir(self.settings['path'])
-
         from . import view, api
         api.setup_pyramid(self, config)
         view.setup_pyramid(self, config)
@@ -110,9 +102,6 @@ class MapnikComponent(Component):
             if not has_mapnik:
                 result.put(self._create_empty_image())
                 return
-
-            if type(xml_map) == unicode:
-                xml_map = unicode(xml_map).encode('utf-8')
 
             mapnik_map = mapnik.Map(0, 0)
             try:
@@ -141,22 +130,19 @@ class MapnikComponent(Component):
                 self.logger.error('Время рендеринга больше, чем время ожидания ответа. {:0.2f}'.format(_t))
                 return
 
-            filename = tempfile.mktemp()
-            mapnik_image.save(filename, util.MAPNIK_DEFAULT_FORMAT)
-
-            with open(filename, mode='rb') as f:
-                buf = StringIO(f.read())
-            os.remove(filename)
-
+            # Преобразование изображения из PNG в объект PIL
+            data = mapnik_image.tostring('png')
+            buf = StringIO()
+            buf.write(data)
             buf.seek(0)
             res_img = Image.open(buf)
             result.put(res_img.crop(target_box))
 
     settings_info = (
         dict(key='thread_count', desc=u'Количество потоков для рендеринга. По умолчанию: multiprocessing.cpu_count()'),
-        dict(key='path', desc=u'Директория для временных тайлов. По умолчанию: /tmp'),
         dict(key='max_zoom', desc=u'Максимальный уровень для запроса тайлов. По умолчанию: 23'),
         dict(key='render_timeout', desc=u'Таймаут отрисовки одного запроса mapnik\'ом в cек. По умолчанию 30'),
+        dict(key='custom_font_dir', desc=u'Директория для хранения пользовательских шрифтов. По умолчанию: /usr/share/fonts')
     )
 
 
