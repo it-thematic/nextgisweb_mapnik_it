@@ -13,17 +13,17 @@ requires = (
 
 entry_points = {
     'nextgisweb.packages': [
-        'nextgisweb_mapnik_id = nextgisweb_mapnik_id:pkginfo',
+        'nextgisweb_mapnik_it = nextgisweb_mapnik_it:pkginfo',
     ],
 
     'nextgisweb.amd_packages': [
-        'nextgisweb_mapnik_id = nextgisweb_mapnik_id:amd_packages',
+        'nextgisweb_mapnik_it = nextgisweb_mapnik_it:amd_packages',
     ],
 
 }
 
 setup(
-    name='nextgisweb_mapnik_id',
+    name='nextgisweb_mapnik_it',
     version=version,
     description="",
     long_description="",

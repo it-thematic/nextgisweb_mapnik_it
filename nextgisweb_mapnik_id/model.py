@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
 from collections import namedtuple
-from Queue import Empty, Queue
 from shutil import copyfileobj
+
+try:
+    import Queue as queue
+    from StringIO import StringIO as StringIO
+except ImportError:
+    import queue as queue
+    from io import StringIO as StringIO
 try:
     import mapnik
 except ImportError:
@@ -11,7 +18,7 @@ from zope.interface import implements
 
 from nextgisweb import db
 from nextgisweb.env import env
-from nextgisweb.feature_layer import IFeatureLayer
+from nextgisweb.feature_layer import IFeatureLayer, on_data_change as on_data_change_feature_layer
 from nextgisweb.file_storage import FileObj
 from nextgisweb.models import declarative_base
 from nextgisweb.resource import (
@@ -24,7 +31,10 @@ from nextgisweb.render import (
     IRenderableStyle,
     IExtentRenderRequest,
     ITileRenderRequest,
-    ILegendableStyle)
+    ILegendableStyle,
+    on_style_change,
+    on_data_change as on_data_change_renderable
+)
 from nextgisweb.spatial_ref_sys import SRS
 from .util import _
 
@@ -32,6 +42,35 @@ Base = declarative_base()
 
 ImageOptions = namedtuple('ImageOptions', ['fndata', 'srs', 'render_size', 'extended', 'target_box', 'result'])
 LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name', 'result'])
+
+
+def _render_bounds(extent, size, padding):
+    res_x = (extent[2] - extent[0]) / size[0]
+    res_y = (extent[3] - extent[1]) / size[1]
+
+    # Bounding box with padding
+    extended = (
+        extent[0] - res_x * padding,
+        extent[1] - res_y * padding,
+        extent[2] + res_x * padding,
+        extent[3] + res_y * padding,
+    )
+
+    # Image dimensions
+    render_size = (
+        size[0] + 2 * padding,
+        size[1] + 2 * padding
+    )
+
+    # Crop box
+    target_box = (
+        padding,
+        padding,
+        size[0] + padding,
+        size[1] + padding
+    )
+
+    return extended, render_size, target_box
 
 
 class MapnikVectorStyle(Base, Resource):
@@ -71,55 +110,39 @@ class MapnikVectorStyle(Base, Resource):
         :param float padding: отступ от картинки
         :return:
         """
-        # Разрешение. Сколько в одном пикселе единиц сетки
-        res_x = (extent[2] - extent[0]) / size[0]
-        res_y = (extent[3] - extent[1]) / size[1]
-
-        # Экстент с учетом отступов ( в единицах измерения карты)
-        extended = (
-            extent[0] - res_x * padding,
-            extent[1] - res_y * padding,
-            extent[2] + res_x * padding,
-            extent[3] + res_y * padding,
-        )
-
-        # Размер изображения с учетом отступов
-        render_size = (
-            size[0] + 2 * padding,
-            size[1] + 2 * padding
-        )
-
-        # Фрагмент изображения размера size
-        target_box = (
-            padding,
-            padding,
-            size[0] + padding,
-            size[1] + padding
-        )
+        extended, render_size, target_box = _render_bounds(extent, size, padding)
 
         res_img = None
         try:
-            result = Queue()
+            result = queue.Queue()
             options = ImageOptions(
-                env.file_storage.filename(self.xml_fileobj).encode('utf-8'), self.srs, render_size, extended, target_box, result
+                env.file_storage.filename(self.xml_fileobj).encode('utf-8'), self.srs, render_size, extended,
+                target_box, result
             )
             env.mapnik.queue.put(options)
             render_timeout = env.mapnik.settings['render_timeout']
             try:
                 res_img = result.get(block=True, timeout=render_timeout)
-            except Empty:
+            except queue.Empty:
                 pass
         finally:
             pass
         return res_img
 
     def render_legend(self):
-        result = Queue()
+        result = queue.Queue()
         options = LegendOptions(env.file_storage.filename(self.xml_fileobj),
                                 self.parent.geometry_type,
                                 self.parent.display_name, result)
         env.mapnik.queue.put(options)
         return result.get()
+
+
+@on_data_change_feature_layer.connect
+def on_data_change_feature_layer(resource, geom):
+    for child in resource.children:
+        if isinstance(child, MapnikVectorStyle):
+            on_data_change_renderable.fire(child, geom)
 
 
 class RenderRequest(object):
@@ -148,9 +171,10 @@ class _file_upload_attr(SerializedProperty):  # NOQA
 
         with open(srcfile, 'r') as fs, open(dstfile, 'w') as fd:
             copyfileobj(fs, fd)
+        on_style_change.fire(srlzr.obj)
 
 
-class QgisVectorStyleSerializer(Serializer):
+class MapnikVectorStyleSerializer(Serializer):
     identity = MapnikVectorStyle.identity
     resclass = MapnikVectorStyle
 
