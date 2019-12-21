@@ -40,8 +40,8 @@ from .util import _
 
 Base = declarative_base()
 
-ImageOptions = namedtuple('ImageOptions', ['fndata', 'srs', 'render_size', 'extended', 'target_box', 'result'])
-LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name', 'result'])
+ImageOptions = namedtuple('ImageOptions', ['map_xml', 'render_size', 'extended', 'target_box'])
+LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name'])
 
 
 def _render_bounds(extent, size, padding):
@@ -73,9 +73,9 @@ def _render_bounds(extent, size, padding):
     return extended, render_size, target_box
 
 
-class MapnikVectorStyle(Base, Resource):
-    identity = 'mapnik_vector_style'
-    cls_display_name = _(u"Mapnik style")
+class MapnikStyle(Base, Resource):
+    identity = 'mapnik_style'
+    cls_display_name = _("Mapnik style")
 
     implements(IRenderableStyle, ILegendableStyle)
 
@@ -112,36 +112,22 @@ class MapnikVectorStyle(Base, Resource):
         """
         extended, render_size, target_box = _render_bounds(extent, size, padding)
 
-        res_img = None
-        try:
-            result = queue.Queue()
-            options = ImageOptions(
-                env.file_storage.filename(self.xml_fileobj).encode('utf-8'), self.srs, render_size, extended,
-                target_box, result
-            )
-            env.mapnik.queue.put(options)
-            render_timeout = env.mapnik.settings['render_timeout']
-            try:
-                res_img = result.get(block=True, timeout=render_timeout)
-            except queue.Empty:
-                pass
-        finally:
-            pass
-        return res_img
+        with open(env.file_storage.filename(self.xml_fileobj), mode='r') as f:
+            map_xml = f.read()
+        options = ImageOptions(map_xml, render_size, extended, target_box)
+        return env.mapnik.render_job(options)
 
     def render_legend(self):
-        result = queue.Queue()
-        options = LegendOptions(env.file_storage.filename(self.xml_fileobj),
-                                self.parent.geometry_type,
-                                self.parent.display_name, result)
-        env.mapnik.queue.put(options)
-        return result.get()
+        with open(env.file_storage.filename(self.xml_fileobj), mode='r') as f:
+            map_xml = f.read()
+        options = LegendOptions(map_xml, self.parent.geometry_type, self.parent.display_name)
+        return env.mapnik.render_job(options)
 
 
 @on_data_change_feature_layer.connect
 def on_data_change_feature_layer(resource, geom):
     for child in resource.children:
-        if isinstance(child, MapnikVectorStyle):
+        if isinstance(child, MapnikStyle):
             on_data_change_renderable.fire(child, geom)
 
 
@@ -165,7 +151,7 @@ class _file_upload_attr(SerializedProperty):  # NOQA
 
     def setter(self, srlzr, value):
         srcfile, _ = env.file_upload.get_filename(value['id'])
-        fileobj = env.file_storage.fileobj(component='nextgisweb_mapnik_it')
+        fileobj = env.file_storage.fileobj(component='nextgisweb_mapnik')
         srlzr.obj.xml_fileobj = fileobj
         dstfile = env.file_storage.filename(fileobj, makedirs=True)
 
@@ -175,7 +161,7 @@ class _file_upload_attr(SerializedProperty):  # NOQA
 
 
 class MapnikVectorStyleSerializer(Serializer):
-    identity = MapnikVectorStyle.identity
-    resclass = MapnikVectorStyle
+    identity = MapnikStyle.identity
+    resclass = MapnikStyle
 
     file_upload = _file_upload_attr(read=None, write=ResourceScope.update)

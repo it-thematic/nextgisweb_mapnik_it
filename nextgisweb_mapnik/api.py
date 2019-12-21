@@ -6,10 +6,10 @@ from pyramid.response import FileResponse
 from nextgisweb.env import env
 from nextgisweb.resource import resource_factory, ResourceScope
 
-from .model import MapnikVectorStyle
+from .model import MapnikStyle
 
 
-def vector_style_xml(request):
+def style_xml(request):
     request.resource_permission(ResourceScope.read)
 
     fn = env.file_storage.filename(request.context.xml_fileobj)
@@ -23,6 +23,6 @@ def vector_style_xml(request):
 
 def setup_pyramid(comp, config):
     config.add_route(
-        'mapnik.vector_style_xml', '/api/resource/{id}/xml',
+        'mapnik.style_xml', '/api/resource/{id}/xml',
         factory=resource_factory
-    ).add_view(vector_style_xml, context=MapnikVectorStyle, request_method='GET')
+    ).add_view(style_xml, context=MapnikStyle, request_method='GET')

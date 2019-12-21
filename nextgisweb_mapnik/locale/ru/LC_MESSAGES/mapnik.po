@@ -1,12 +1,12 @@
-# Russian translations for nextgisweb_mapnik_it.
+# Russian translations for nextgisweb_mapnik.
 # Copyright (C) 2019 UNKNOWN
 # This file is distributed under the same license as the
-# nextgisweb_mapnik_it project.
+# nextgisweb_mapnik project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2019.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: nextgisweb_mapnik_it 0.0\n"
+"Project-Id-Version: nextgisweb_mapnik 0.0\n"
 "Report-Msgid-Bugs-To: UNKNOWN\n"
 "POT-Creation-Date: 2019-12-20 13:43+0300\n"
 "PO-Revision-Date: 2019-12-20 13:44+0300\n"
