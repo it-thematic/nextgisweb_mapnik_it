@@ -1,7 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*$py.class
 
 # C extensions
 *.so
@@ -12,9 +11,7 @@ env/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
-.eggs/
 lib/
 lib64/
 parts/
@@ -23,6 +20,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+node_modules/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -38,23 +36,25 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .coverage
-.coverage.*
 .cache
 nosetests.xml
 coverage.xml
-*,cover
-.hypothesis/
 
 # Translations
 *.mo
 *.pot
+*.jed
 
-# Django stuff:
-*.log
 
 # Sphinx documentation
-docs/_build/
+doc/_build/
+doc/*/_build/
+*~
 
-# PyBuilder
-target/
-.idea/
+.vagrant
+
+#  IDE
+.idea
+.vscode
+
+XDG_CACHE_HOME
