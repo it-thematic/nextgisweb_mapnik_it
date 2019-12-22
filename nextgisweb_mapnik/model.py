@@ -115,13 +115,13 @@ class MapnikStyle(Base, Resource):
         with open(env.file_storage.filename(self.xml_fileobj), mode='r') as f:
             map_xml = f.read()
         options = ImageOptions(map_xml, render_size, extended, target_box)
-        return env.mapnik.render_job(options)
+        return env.mapnik.renderer_job(options)
 
     def render_legend(self):
         with open(env.file_storage.filename(self.xml_fileobj), mode='r') as f:
             map_xml = f.read()
         options = LegendOptions(map_xml, self.parent.geometry_type, self.parent.display_name)
-        return env.mapnik.render_job(options)
+        return env.mapnik.renderer_job(options)
 
 
 @on_data_change_feature_layer.connect
