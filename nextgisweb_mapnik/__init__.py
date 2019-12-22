@@ -8,7 +8,7 @@ from PIL import Image
 from nextgisweb.component import Component
 
 from .model import Base, ImageOptions, LegendOptions
-from .util import COMP_ID, _
+from .util import COMP_ID, DEFAULT_IMAGE_FORMAT, _
 
 try:
     import Queue as queue
@@ -107,6 +107,7 @@ class MapnikComponent(Component):
 
     def renderer(self):
 
+        mapnik_map = None
         while True:
             options, result = self.queue.get()
             if isinstance(options, LegendOptions):
@@ -117,20 +118,22 @@ class MapnikComponent(Component):
                     result.put(self._create_empty_image())
                     return
 
-                mapnik_map = mapnik.Map(0, 0)
-                try:
-                    mapnik.load_map_from_string(mapnik_map, xml_map)
-                except Exception as e:
-                    self.logger.error(_('Error load mapnik map'))
-                    self.logger.exception(e.message)
-                    result.put(self._create_empty_image())
-                    return
+                if mapnik_map is None:
+                    mapnik_map = mapnik.Map(0, 0)
+                    try:
+                        mapnik.load_map_from_string(mapnik_map, xml_map)
+                    except Exception as e:
+                        self.logger.error(_('Error load mapnik map'))
+                        self.logger.exception(e.message)
+                        result.put(self._create_empty_image())
+                        mapnik_map = None
+                        continue
 
                 width, height = render_size
                 mapnik_map.resize(width, height)
 
                 x1, y1, x2, y2 = extended
-                box = mapnik.Box2d(**extended)
+                box = mapnik.Box2d(x1, y1, x2, y2)
                 mapnik_map.zoom_to_box(box)
 
                 mapnik_image = mapnik.Image(width, height)
@@ -138,12 +141,13 @@ class MapnikComponent(Component):
                 _t = time.time()
                 mapnik.render(mapnik_map, mapnik_image)
                 _t = time.time() - _t
-                if _t > self.settings['render_timeout']:
+                self.logger.info('Time of rendering %0.2f' % _t)
+                if _t > self._render_timeout:
                     self.logger.error(_('Time of rendering bigger that timeout. {:0.2f}'.format(_t)))
                     return
 
                 # Преобразование изображения из PNG в объект PIL
-                data = mapnik_image.tostring('png')
+                data = mapnik_image.tostring(DEFAULT_IMAGE_FORMAT)
                 buf = StringIO()
                 buf.write(data)
                 buf.seek(0)
