@@ -5,4 +5,4 @@ from nextgisweb.i18n import trstring_factory
 COMP_ID = 'mapnik'
 _ = trstring_factory(COMP_ID)
 
-MAPNIK_DEFAULT_FORMAT = b'png256'
+DEFAULT_IMAGE_FORMAT = b'png'

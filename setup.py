@@ -1,29 +1,28 @@
-import os
-import sys
-
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
 
 version = '0.0'
 
 requires = (
+    'mapnik',
     'nextgisweb',
     'Pillow'
 )
 
 entry_points = {
     'nextgisweb.packages': [
-        'nextgisweb_mapnik_id = nextgisweb_mapnik_id:pkginfo',
+        'nextgisweb_mapnik = nextgisweb_mapnik:pkginfo',
     ],
 
     'nextgisweb.amd_packages': [
-        'nextgisweb_mapnik_id = nextgisweb_mapnik_id:amd_packages',
+        'nextgisweb_mapnik = nextgisweb_mapnik:amd_packages',
     ],
 
 }
 
 setup(
-    name='nextgisweb_mapnik_id',
+    name='nextgisweb_mapnik',
     version=version,
     description="",
     long_description="",

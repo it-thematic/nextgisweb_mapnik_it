@@ -30,7 +30,7 @@ define([
     return declare([ContentPane, serialize.Mixin, _TemplatedMixin, _WidgetsInTemplateMixin], {
         templateString: hbsI18n(template, i18n),
         title: i18n.gettext("Mapnik style"),
-        prefix: "mapnik_vector_style",
+        prefix: "mapnik_style",
 
         serializeInMixin: function (data) {
             var prefix = this.prefix,
