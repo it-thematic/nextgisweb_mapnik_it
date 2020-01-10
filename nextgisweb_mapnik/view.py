@@ -20,11 +20,11 @@ def setup_pyramid(comp, config):
 
         def build(self, args):
             if isinstance(args.obj, MapnikStyle):
-                yield dm.Label('mapnik_vector_style', _(u"Mapnik style"))
+                yield dm.Label('mapnik_style', _(u"Mapnik style"))
 
                 if args.obj.xml_fileobj is not None:
                     yield dm.Link(
-                        'mapnik_vector_style/xml', _(u"XML file"),
+                        'mapnik_style/xml', _(u"XML file"),
                         lambda args: args.request.route_url(
                             "mapnik.style_xml", id=args.obj.id))
 
