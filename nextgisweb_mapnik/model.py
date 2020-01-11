@@ -40,7 +40,7 @@ from .util import _
 
 Base = declarative_base()
 
-ImageOptions = namedtuple('ImageOptions', ['map_xml', 'render_size', 'extended', 'target_box'])
+ImageOptions = namedtuple('ImageOptions', ['style_id', 'map_xml', 'render_size', 'extended', 'target_box'])
 LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name'])
 
 
@@ -114,7 +114,7 @@ class MapnikStyle(Base, Resource):
 
         with open(env.file_storage.filename(self.xml_fileobj), mode='r') as f:
             map_xml = f.read()
-        options = ImageOptions(map_xml, render_size, extended, target_box)
+        options = ImageOptions(self.id, map_xml, render_size, extended, target_box)
         return env.mapnik.renderer_job(options)
 
     def render_legend(self):
