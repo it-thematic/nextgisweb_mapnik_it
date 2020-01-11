@@ -107,19 +107,20 @@ class MapnikComponent(Component):
 
     def renderer(self):
 
-        mapnik_map = None
+        maps = dict()
         while True:
             options, result = self.queue.get()
             if isinstance(options, LegendOptions):
                 self.logger.error(_('Not supported yet'))
             else:
-                xml_map, render_size, extended, target_box = options
+                style_id, xml_map, render_size, extended, target_box = options
                 if not has_mapnik:
+                    self.logger.warning(_('Mapnik don\'t supported'))
                     result.put(self._create_empty_image())
                     return
 
-                if mapnik_map is None:
-                    mapnik_map = mapnik.Map(0, 0)
+                mapnik_map = maps.setdefault(style_id, mapnik.Map(0,0))
+                if len([style for style in mapnik_map.styles]) == 0:
                     try:
                         mapnik.load_map_from_string(mapnik_map, xml_map)
                     except Exception as e:
@@ -127,6 +128,7 @@ class MapnikComponent(Component):
                         self.logger.exception(e.message)
                         result.put(self._create_empty_image())
                         mapnik_map = None
+                        del maps[style_id]
                         continue
 
                 width, height = render_size
