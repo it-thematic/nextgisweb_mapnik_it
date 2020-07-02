@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import os
 import time
 from threading import Thread
 from PIL import Image
 from nextgisweb.component import Component
+from nextgisweb.lib.config import Option
+from nextgisweb.render import on_style_change
+from nextgisweb.resource import Resource
+
 
 from .model import Base, ImageOptions, LegendOptions
 from .util import COMP_ID, DEFAULT_IMAGE_FORMAT, _
 
-try:
-    import Queue as queue
-    from StringIO import StringIO as StringIO
-except ImportError:
-    import queue as queue
-    from io import StringIO as StringIO
+from six import StringIO
+from six.moves.queue import Queue
 
 has_mapnik = False
 try:
@@ -31,51 +30,39 @@ except ImportError as e:
     except ImportError as e:
         logging.error(e.message)
 
+MANPIK_MAPS = dict()
+# The dictionary of the loaded maps
+
+
+@on_style_change.connect
+def on_style_change_handler(resource):
+    """
+    Функция которая срабатывает по изменению стиля
+
+    :param Resource resource: ресурс стиля
+    :return:
+    """
+    if resource.id in MANPIK_MAPS.keys():
+        del MANPIK_MAPS[resource.id]
+
 
 class MapnikComponent(Component):
     identity = COMP_ID
     metadata = Base.metadata
 
-    default_thread_count = 1
-    default_max_zoom = 19
-    default_render_timeout = 60.0
-
     def initialize(self):
         super(MapnikComponent, self).initialize()
 
-        if 'thread_count' not in self.settings:
-            self.settings['thread_count'] = self.__class__.default_thread_count
-        else:
-            try:
-                self.settings['thread_count'] = int(self.settings['thread_count'])
-            except ValueError:
-                self.logger.error(_('Invalid value of "%s". The default value is %s.') % (
-                    self.__class__.default_thread_count.__class__.__name__, self.__class__.default_thread_count))
-                self.settings['thread_count'] = self.__class__.default_thread_count
+        self.thread_count = self.options['thread_count']
+        self.max_zoom = self.options['max_zoom']
+        self.render_timeout = self.options['render_timeout']
 
-        if 'max_zoom' not in self.settings:
-            self.settings['max_zoom'] = self.__class__.default_max_zoom
-        else:
-            try:
-                self.settings['max_zoom'] = abs(int(self.settings['max_zoom']))
-            except ValueError:
-                self.logger.error(_('Invalid value of "%s". The default value is %s.') % (
-                    self.__class__.default_max_zoom.__class__.__name__, self.__class__.default_max_zoom))
-                self.settings['max_zoom'] = self.__class__.default_max_zoom
+        if has_mapnik and 'fontpath' in self.options:
+            mapnik.register_fonts(self.options['fontpath'])
 
-        try:
-            self._render_timeout = float(self.settings.get('render_timeout', self.__class__.default_render_timeout))
-        except ValueError:
-            self.logger.error(_('Invalid value of "%s". The default value is %s.') % (
-                self.__class__.default_render_timeout.__class__.__name__, self.__class__.default_render_timeout))
-            self._render_timeout = self.__class__.default_render_timeout
-
-        if has_mapnik:
-            mapnik.register_fonts(self.settings['fontpath'].encode('utf-8') if 'fontpath' in self.settings else None)
-
-        self.workers = {}
-        self.queue = queue.Queue()
-        for i in range(self.settings['thread_count']):
+        self.workers = dict()
+        self.queue = Queue()
+        for i in range(self.thread_count):
             worker = Thread(target=self.renderer)
             worker.daemon = True
             worker.start()
@@ -91,15 +78,23 @@ class MapnikComponent(Component):
         api.setup_pyramid(self, config)
         view.setup_pyramid(self, config)
 
+    def client_settings(self, request):
+        return dict(
+            thread_count=self.thead_cound,
+            max_zoom=self.maxzoom,
+            render_timeout=self.render_timeout,
+            fontpath=self.fontpath
+        )
+
     @staticmethod
     def _create_empty_image():
         return Image.new('RGBA', (256, 256), (0, 0, 0, 0))
 
     def renderer_job(self, options):
-        result_queue = queue.Queue()
+        result_queue = Queue()
         self.queue.put((options, result_queue))
 
-        result = result_queue.get(block=True, timeout=self._render_timeout)
+        result = result_queue.get(block=True, timeout=self.render_timeout)
 
         if isinstance(result, Exception):
             raise result
@@ -107,7 +102,6 @@ class MapnikComponent(Component):
 
     def renderer(self):
 
-        maps = dict()
         while True:
             options, result = self.queue.get()
             if isinstance(options, LegendOptions):
@@ -117,18 +111,18 @@ class MapnikComponent(Component):
                 if not has_mapnik:
                     self.logger.warning(_('Mapnik don\'t supported'))
                     result.put(self._create_empty_image())
-                    return
+                    continue
 
-                mapnik_map = maps.setdefault(style_id, mapnik.Map(0,0))
+                mapnik_map = MANPIK_MAPS.setdefault(style_id, mapnik.Map(0, 0))
                 if len([style for style in mapnik_map.styles]) == 0:
                     try:
                         mapnik.load_map_from_string(mapnik_map, xml_map)
                     except Exception as e:
-                        self.logger.error(_('Error load mapnik map'))
+                        self.logger.error(_('Error of loading mapnik map'))
                         self.logger.exception(e.message)
-                        result.put(self._create_empty_image())
                         mapnik_map = None
-                        del maps[style_id]
+                        del MANPIK_MAPS[style_id]
+                        result.put(self._create_empty_image())
                         continue
 
                 width, height = render_size
@@ -144,7 +138,7 @@ class MapnikComponent(Component):
                 mapnik.render(mapnik_map, mapnik_image)
                 _t = time.time() - _t
                 self.logger.info('Time of rendering %0.2f' % _t)
-                if _t > self._render_timeout:
+                if _t > self.render_timeout:
                     self.logger.error(_('Time of rendering bigger that timeout. {:0.2f}'.format(_t)))
                     return
 
@@ -156,11 +150,11 @@ class MapnikComponent(Component):
                 res_img = Image.open(buf)
                 result.put(res_img.crop(target_box))
 
-    settings_info = (
-        dict(key='thread_count', desc=_('Count of thread for rendering.')),
-        dict(key='max_zoom', desc='Max zoom level for rendering.'),
-        dict(key='render_timeout', desc='Mapnik rendering timeout for one request.'),
-        dict(key='fontpath', desc='Font search folder')
+    option_annotations = (
+        Option('thread_count', int, default=1, doc=_('Count of thread for rendering.')),
+        Option('max_zoom', int, default=19, doc=_('Max zoom level for rendering.')),
+        Option('render_timeout', float, default=60.0, doc=_('Mapnik rendering timeout for one request.')),
+        Option('fontpath', str, doc=_('Folder for custom fonts')),
     )
 
 
