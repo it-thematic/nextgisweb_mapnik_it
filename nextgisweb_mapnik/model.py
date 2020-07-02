@@ -3,17 +3,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 from collections import namedtuple
 from shutil import copyfileobj
 
-try:
-    import Queue as queue
-    from StringIO import StringIO as StringIO
-except ImportError:
-    import queue as queue
-    from io import StringIO as StringIO
-try:
-    import mapnik
-except ImportError:
-    import mapnik2 as mapnik
-
 from zope.interface import implements
 
 from nextgisweb import db

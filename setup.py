@@ -2,12 +2,13 @@
 from setuptools import setup, find_packages
 
 
-version = '0.0'
+version = '0.1'
 
 requires = (
     'mapnik',
     'nextgisweb',
-    'Pillow'
+    'Pillow',
+    'six'
 )
 
 entry_points = {
