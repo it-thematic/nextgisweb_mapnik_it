@@ -1,0 +1,1 @@
+INSERT INTO core_migration VALUES ('mapnik', '00000000');

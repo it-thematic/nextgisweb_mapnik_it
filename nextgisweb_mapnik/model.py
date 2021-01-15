@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from collections import namedtuple
 from shutil import copyfileobj
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from nextgisweb import db
 from nextgisweb.env import env
@@ -62,11 +62,10 @@ def _render_bounds(extent, size, padding):
     return extended, render_size, target_box
 
 
+@implementer(IRenderableStyle, ILegendableStyle)
 class MapnikStyle(Base, Resource):
     identity = 'mapnik_style'
     cls_display_name = _("Mapnik style")
-
-    implements(IRenderableStyle, ILegendableStyle)
 
     __scope__ = DataScope
 
@@ -120,8 +119,8 @@ def on_data_change_feature_layer(resource, geom):
             on_data_change_renderable.fire(child, geom)
 
 
+@implementer(IExtentRenderRequest, ITileRenderRequest)
 class RenderRequest(object):
-    implements(IExtentRenderRequest, ITileRenderRequest)
 
     def __init__(self, style, srs, cond=None):
         self.style = style
