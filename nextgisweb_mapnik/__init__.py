@@ -13,7 +13,7 @@ from nextgisweb.resource import Resource
 from .model import Base, ImageOptions, LegendOptions
 from .util import COMP_ID, DEFAULT_IMAGE_FORMAT, _
 
-from six import StringIO
+from six import BytesIO
 from six.moves.queue import Queue
 
 has_mapnik = False
@@ -126,6 +126,7 @@ class MapnikComponent(Component):
                         continue
 
                 width, height = render_size
+                width, height = int(width), int(height)
                 mapnik_map.resize(width, height)
 
                 x1, y1, x2, y2 = extended
@@ -144,7 +145,7 @@ class MapnikComponent(Component):
 
                 # Преобразование изображения из PNG в объект PIL
                 data = mapnik_image.tostring(DEFAULT_IMAGE_FORMAT)
-                buf = StringIO()
+                buf = BytesIO()
                 buf.write(data)
                 buf.seek(0)
                 res_img = Image.open(buf)
