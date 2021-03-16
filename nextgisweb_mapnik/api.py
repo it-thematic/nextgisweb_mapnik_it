@@ -15,8 +15,7 @@ def style_xml(request):
     fn = env.file_storage.filename(request.context.xml_fileobj)
 
     response = FileResponse(fn, request=request)
-    response.content_disposition = (b'attachment; filename=%d.xml'
-                                    % request.context.id)
+    response.content_disposition = ('attachment; filename=%d.xml' % request.context.id)
 
     return response
 
