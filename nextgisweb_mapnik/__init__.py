@@ -22,13 +22,13 @@ try:
 
     has_mapnik = True
 except ImportError as e:
-    logging.error(e.message)
+    logging.error(e)
     try:
         import mapnik2 as mapnik
 
         has_mapnik = True
     except ImportError as e:
-        logging.error(e.message)
+        logging.error(e)
 
 MANPIK_MAPS = dict()
 # The dictionary of the loaded maps
@@ -119,7 +119,7 @@ class MapnikComponent(Component):
                         mapnik.load_map_from_string(mapnik_map, xml_map)
                     except Exception as e:
                         self.logger.error(_('Error of loading mapnik map'))
-                        self.logger.exception(e.message)
+                        self.logger.exception(e)
                         mapnik_map = None
                         del MANPIK_MAPS[style_id]
                         result.put(self._create_empty_image())
@@ -141,7 +141,7 @@ class MapnikComponent(Component):
                 self.logger.info('Time of rendering %0.2f' % _t)
                 if _t > self.render_timeout:
                     self.logger.error(_('Time of rendering bigger that timeout. {:0.2f}'.format(_t)))
-                    return
+                    continue
 
                 # Преобразование изображения из PNG в объект PIL
                 data = mapnik_image.tostring(DEFAULT_IMAGE_FORMAT)
