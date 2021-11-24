@@ -9,13 +9,13 @@ from nextgisweb.resource import resource_factory, ResourceScope
 from .model import MapnikStyle
 
 
-def style_xml(request):
+def style_xml(resource, request):
     request.resource_permission(ResourceScope.read)
 
-    fn = env.file_storage.filename(request.context.xml_fileobj)
+    fn = env.file_storage.filename(resource.xml_fileobj)
 
     response = FileResponse(fn, request=request)
-    response.content_disposition = ('attachment; filename=%d.xml' % request.context.id)
+    response.content_disposition = ('attachment; filename=%d.xml' % resource.id)
 
     return response
 
