@@ -56,9 +56,9 @@ class MapnikComponent(Component):
         self.thread_count = self.options['thread_count']
         self.max_zoom = self.options['max_zoom']
         self.render_timeout = self.options['render_timeout']
-
-        if has_mapnik and 'fontpath' in self.options:
-            mapnik.register_fonts(self.options['fontpath'])
+        self.font_path = self.options['fontpath'] if (has_mapnik and 'fontpath' in self.options) else ''
+        if self.font_path:
+            mapnik.register_fonts(self.font_path)
 
         self.workers = dict()
         self.queue = Queue()
@@ -80,8 +80,8 @@ class MapnikComponent(Component):
 
     def client_settings(self, request):
         return dict(
-            thread_count=self.thead_cound,
-            max_zoom=self.maxzoom,
+            thread_count=self.thread_count,
+            max_zoom=self.max_zoom,
             render_timeout=self.render_timeout,
             fontpath=self.fontpath
         )
