@@ -152,10 +152,10 @@ class MapnikComponent(Component):
                 result.put(res_img.crop(target_box))
 
     option_annotations = (
-        Option('thread_count', int, default=1, doc=_('Count of thread for rendering.')),
-        Option('max_zoom', int, default=19, doc=_('Max zoom level for rendering.')),
-        Option('render_timeout', float, default=60.0, doc=_('Mapnik rendering timeout for one request.')),
-        Option('fontpath', str, doc=_('Folder for custom fonts')),
+        Option('thread_count', int, default=1, doc='Count of thread for rendering.'),
+        Option('max_zoom', int, default=19, doc='Max zoom level for rendering.'),
+        Option('render_timeout', float, default=60.0, doc='Mapnik rendering timeout for one request.'),
+        Option('fontpath', str, doc='Folder for custom fonts')
     )
 
 
