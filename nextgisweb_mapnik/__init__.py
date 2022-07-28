@@ -6,6 +6,7 @@ from threading import Thread
 from PIL import Image
 from nextgisweb.component import Component
 from nextgisweb.lib.config import Option
+from nextgisweb.lib.logging import logger
 from nextgisweb.render import on_style_change
 from nextgisweb.resource import Resource
 
@@ -105,11 +106,11 @@ class MapnikComponent(Component):
         while True:
             options, result = self.queue.get()
             if isinstance(options, LegendOptions):
-                self.logger.error(_('Not supported yet'))
+                logger.error(_('Not supported yet'))
             else:
                 style_id, xml_map, render_size, extended, target_box = options
                 if not has_mapnik:
-                    self.logger.warning(_('Mapnik don\'t supported'))
+                    logger.warning(_('Mapnik don\'t supported'))
                     result.put(self._create_empty_image())
                     continue
 
@@ -118,8 +119,8 @@ class MapnikComponent(Component):
                     try:
                         mapnik.load_map_from_string(mapnik_map, xml_map)
                     except Exception as e:
-                        self.logger.error(_('Error of loading mapnik map'))
-                        self.logger.exception(e)
+                        logger.error(_('Error of loading mapnik map'))
+                        logger.exception(e)
                         mapnik_map = None
                         del MANPIK_MAPS[style_id]
                         result.put(self._create_empty_image())
@@ -138,9 +139,9 @@ class MapnikComponent(Component):
                 _t = time.time()
                 mapnik.render(mapnik_map, mapnik_image)
                 _t = time.time() - _t
-                self.logger.info('Time of rendering %0.2f' % _t)
+                logger.info('Time of rendering %0.2f' % _t)
                 if _t > self.render_timeout:
-                    self.logger.error(_('Time of rendering bigger that timeout. {:0.2f}'.format(_t)))
+                    logger.error(_('Time of rendering bigger that timeout. {:0.2f}'.format(_t)))
                     continue
 
                 # Преобразование изображения из PNG в объект PIL
