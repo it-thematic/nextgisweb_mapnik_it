@@ -143,7 +143,7 @@ class _file_upload_attr(SerializedProperty):  # NOQA
         on_style_change.fire(srlzr.obj)
 
 
-class MapnikVectorStyleSerializer(Serializer):
+class MapnikStyleSerializer(Serializer):
     identity = MapnikStyle.identity
     resclass = MapnikStyle
 
