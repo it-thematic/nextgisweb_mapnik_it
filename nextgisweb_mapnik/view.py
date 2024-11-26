@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function, absolute_import
-
+from nextgisweb.env import _
+from nextgisweb.lib import dynmenu as dm
 from nextgisweb.resource import Widget, Resource
-import nextgisweb.dynmenu as dm
 
 from .model import MapnikStyle
-from .util import _
 
 
 class Widget(Widget):

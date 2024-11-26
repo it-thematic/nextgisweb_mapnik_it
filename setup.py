@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, unicode_literals
+import io
 from setuptools import setup, find_packages
 
-
-version = '0.1'
+with io.open("VERSION", mode="r") as fd:
+    VERSION = fd.read().rstrip()
 
 requires = (
-    'mapnik',
-    'nextgisweb',
+    # 'mapnik',
+    'nextgisweb>=4.7.0.dev14',
     'Pillow',
-    'six'
 )
 
 entry_points = {
     'nextgisweb.packages': [
-        'nextgisweb_mapnik = nextgisweb_mapnik:pkginfo',
+        'nextgisweb_mapnik = nextgisweb:single_component',
     ],
 
     'nextgisweb.amd_packages': [
@@ -25,18 +23,15 @@ entry_points = {
 
 setup(
     name='nextgisweb_mapnik',
-    version=version,
-    description="",
-    long_description="",
-    classifiers=[],
-    keywords='',
-    author='',
-    author_email='',
-    url='',
-    license='',
+    version=VERSION,
+    description="Mapnik renderer for NextGIS Web",
+    author="IT-Thematic",
+    author_email="inbox@it-thematic.ru",
+    license='MIT',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     include_package_data=True,
     zip_safe=False,
+    python_requires='>=3.8,<4',
     install_requires=requires,
     entry_points=entry_points,
 )

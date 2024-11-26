@@ -1,15 +1,12 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
 from collections import namedtuple
 from shutil import copyfileobj
 
 from zope.interface import implementer
 
-from nextgisweb import db
-from nextgisweb.env import env
+from nextgisweb.env import Base, _, env
+from nextgisweb.lib import db
 from nextgisweb.feature_layer import IFeatureLayer, on_data_change as on_data_change_feature_layer
 from nextgisweb.file_storage import FileObj
-from nextgisweb.models import declarative_base
 from nextgisweb.resource import (
     Resource,
     ResourceScope,
@@ -25,9 +22,7 @@ from nextgisweb.render import (
     on_data_change as on_data_change_renderable
 )
 from nextgisweb.spatial_ref_sys import SRS
-from .util import _
 
-Base = declarative_base()
 
 ImageOptions = namedtuple('ImageOptions', ['style_id', 'map_xml', 'render_size', 'extended', 'target_box'])
 LegendOptions = namedtuple('LegendOptions', ['xml', 'geometry_type', 'layer_name'])
